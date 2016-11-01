@@ -88,7 +88,8 @@ public class JdbcRepository implements Repository {
             result.append(resultSet.getString(i));
             result.append(",");
         }
-        LOG.debug("String {} added", result.substring(0, result.lastIndexOf(",")));
-        return result.substring(0, result.lastIndexOf(","));
+        result.replace(result.lastIndexOf(","), result.length(), "\n");
+        LOG.debug("String {} added", result);
+        return result.toString();
     }
 }

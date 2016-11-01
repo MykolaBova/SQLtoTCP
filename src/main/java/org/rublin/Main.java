@@ -2,6 +2,8 @@ package org.rublin;
 
 import org.rublin.repository.JdbcRepository;
 import org.rublin.repository.Repository;
+import org.rublin.tcp.Sender;
+import org.rublin.tcp.TcpSender;
 
 import java.util.ResourceBundle;
 
@@ -20,10 +22,17 @@ public class Main {
     public static final String PASSWORD = MYSQL.getString("database.password");
     public static final String TABLE = DATABASE_NAME + "." + MYSQL.getString("database.table");
 
+    public static final ResourceBundle TCP = ResourceBundle.getBundle("tcp.server");
+    public static final String SERVER_IP = TCP.getString("server.ip");
+    public static final int SERVER_PORT = Integer.valueOf(TCP.getString("server.port"));
+
 
     private static final Repository repository = JdbcRepository.getRepository();
+    private static final Sender sender = TcpSender.getSender();
 
     public static void main(String[] args) {
-        repository.getAllRecords(TABLE).forEach(System.out::println);
+//        repository.getAllRecords(TABLE).forEach(System.out::println);
+        repository.getLastRecords(200, TABLE).forEach(s -> sender.sendMessage(s));
+        repository.closeRepository();
     }
 }
