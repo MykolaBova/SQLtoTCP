@@ -33,6 +33,7 @@ public class TcpSender implements Sender {
         OutputStream out = socket.getOutputStream();
         DataOutputStream dos = new DataOutputStream(out)) {
             dos.write(message.getBytes());
+            LOG.info("Message {} send successful", message);
         } catch (IOException e) {
             LOG.error(e.getMessage());
         }

@@ -30,7 +30,6 @@ public class JdbcRepository implements Repository {
         try {
             Class.forName(MYSQL.getString("database.driverClassName"));
             connection = DriverManager.getConnection(String.format("%s?user=%s&password=%s", MYSQL.getString("database.url"), LOGIN, PASSWORD));
-            connection.setAutoCommit(false);
             statement = connection.createStatement();
         } catch (Exception e) {
             LOG.error(e.getMessage());

@@ -4,8 +4,12 @@ import org.rublin.repository.JdbcRepository;
 import org.rublin.repository.Repository;
 import org.rublin.tcp.Sender;
 import org.rublin.tcp.TcpSender;
+import org.slf4j.Logger;
 
+import java.util.List;
 import java.util.ResourceBundle;
+
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * ???
@@ -15,6 +19,8 @@ import java.util.ResourceBundle;
  * @since 1.0
  */
 public class Main {
+
+    private static final Logger LOG = getLogger(Main.class);
 
     public static final ResourceBundle MYSQL = ResourceBundle.getBundle("db.mysql");
     public static final String DATABASE_NAME = MYSQL.getString("database.dbName");
@@ -31,8 +37,26 @@ public class Main {
     private static final Sender sender = TcpSender.getSender();
 
     public static void main(String[] args) {
-//        repository.getAllRecords(TABLE).forEach(System.out::println);
-        repository.getLastRecords(200, TABLE).forEach(s -> sender.sendMessage(s));
-        repository.closeRepository();
+        List<String> list = repository.getAllRecords(TABLE);
+        list.forEach(s -> sender.sendMessage(s));
+        int lastId = getLastId(list);
+        LOG.info("{} messages send successful. LastID: {}", list.size(), lastId);
+        while (true) {
+            list = repository.getLastRecords(lastId, TABLE);
+            if (list.size() > 0) {
+                list.forEach(s -> sender.sendMessage(s));
+                lastId = getLastId(list);
+                LOG.info("{} messages send successful. LastID: {}", list.size(), lastId);
+            }
+        }
+
+//        repository.closeRepository();
+    }
+
+    private static int getLastId(List<String> list) {
+        String s = list.get(list.size() - 1);
+        return Integer.valueOf(
+                s.substring(0, s.indexOf(","))
+        );
     }
 }
