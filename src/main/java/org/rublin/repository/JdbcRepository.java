@@ -3,11 +3,10 @@ package org.rublin.repository;
 import org.slf4j.Logger;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ResourceBundle;
 
+import static org.rublin.Main.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -23,10 +22,7 @@ public class JdbcRepository implements Repository {
 
     private static final Logger LOG = getLogger(JdbcRepository.class);
 
-    private static final ResourceBundle MYSQL = ResourceBundle.getBundle("db.mysql");
-    private static final String DATABASE_NAME = MYSQL.getString("database.dbName");
-    private static final String LOGIN = MYSQL.getString("database.username");
-    private static final String PASSWORD = MYSQL.getString("database.password");
+
     private static final JdbcRepository repository = new JdbcRepository();
     private Connection connection;
     private Statement statement;
@@ -47,12 +43,12 @@ public class JdbcRepository implements Repository {
 
     @Override
     public List<String> getAllRecords(String table) {
-        return null;
+        return select(String.format("SELECT * FROM %s",table));
     }
 
     @Override
     public List<String> getLastRecords(int id, String table) {
-        return null;
+        return select(String.format("SELECT * FROM %s WHERE id > %d", table, id));
     }
 
     /**
@@ -70,5 +66,29 @@ public class JdbcRepository implements Repository {
         } catch (SQLException e ) {
             LOG.error(e.getMessage());
         }
+    }
+
+    private List<String> select(String query) {
+        List<String> result = new ArrayList<>();
+        try {
+            ResultSet resultSet = statement.executeQuery(query);
+            while (resultSet.next()) {
+                result.add(getString(resultSet));
+            }
+        } catch (SQLException e) {
+            LOG.error(e.getMessage());
+        }
+        return result;
+    }
+
+    private String getString (ResultSet resultSet) throws SQLException {
+        int columnCount = resultSet.getMetaData().getColumnCount();
+        StringBuilder result = new StringBuilder();
+        for (int i = 1; i <= columnCount; i++) {
+            result.append(resultSet.getString(i));
+            result.append(",");
+        }
+        LOG.debug("String {} added", result.substring(0, result.lastIndexOf(",")));
+        return result.substring(0, result.lastIndexOf(","));
     }
 }
