@@ -1,7 +1,7 @@
 package org.rublin.tcp;
 
 /**
- * ???
+ *
  *
  * @author Ruslan Sheremet
  * @see
