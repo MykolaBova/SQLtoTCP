@@ -28,11 +28,11 @@ public class JdbcRepository implements Repository {
     private Statement statement;
     private JdbcRepository() {
         try {
-            Class.forName(MYSQL.getString("database.driverClassName"));
-            connection = DriverManager.getConnection(String.format("%s?user=%s&password=%s", MYSQL.getString("database.url"), LOGIN, PASSWORD));
+            Class.forName(properties.getProperty("db.driverClassName"));
+            connection = DriverManager.getConnection(String.format("%s?user=%s&password=%s", properties.getProperty("db.url"), properties.getProperty("db.username"), properties.getProperty("db.password")));
             statement = connection.createStatement();
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            LOG.error("Failed to establish database connection. Error: {}", e.getMessage());
         }
     }
 
@@ -63,8 +63,7 @@ public class JdbcRepository implements Repository {
                 connection.close();
             }
         } catch (SQLException e ) {
-            LOG.error(e.getMessage());
-        }
+            LOG.error("Failed to close database connection. Error: {}", e.getMessage());       }
     }
 
     private List<String> select(String query) {

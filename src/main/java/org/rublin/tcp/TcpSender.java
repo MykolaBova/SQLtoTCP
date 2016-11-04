@@ -10,10 +10,11 @@ import static org.rublin.Main.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * ???
+ * Send message {@link String} to TCP socket {@link java.net.Socket}
  *
  * @author Ruslan Sheremet
- * @see
+ * @see String
+ * @see Socket
  * @since 1.0
  */
 public class TcpSender implements Sender {
@@ -21,7 +22,6 @@ public class TcpSender implements Sender {
     private static final Logger LOG = getLogger(TcpSender.class);
 
     private static final TcpSender sender = new TcpSender();
-//    private Socket socket;
 
     public static TcpSender getSender() {
         return sender;
@@ -29,13 +29,15 @@ public class TcpSender implements Sender {
 
     @Override
     public void sendMessage(String message) {
-        try (Socket socket = new Socket(SERVER_IP, SERVER_PORT);
+        String server = properties.getProperty("server.ip");
+        int port = Integer.valueOf(properties.getProperty("server.port"));
+        try (Socket socket = new Socket(server, port);
         OutputStream out = socket.getOutputStream();
         DataOutputStream dos = new DataOutputStream(out)) {
             dos.write(message.getBytes());
             LOG.info("Message {} send successful", message);
         } catch (IOException e) {
-            LOG.error(e.getMessage());
+            LOG.error("Message send failed. Check network connection to server {} and port {}. Error: {}", server, port, e.getMessage());
         }
     }
 }

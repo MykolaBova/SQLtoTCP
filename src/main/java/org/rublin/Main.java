@@ -1,76 +1,91 @@
 package org.rublin;
 
 import org.rublin.repository.JdbcRepository;
-import org.rublin.repository.Repository;
-import org.rublin.tcp.Sender;
 import org.rublin.tcp.TcpSender;
 import org.slf4j.Logger;
 
 import java.io.*;
 import java.util.List;
 import java.util.Properties;
-import java.util.ResourceBundle;
-import java.util.stream.IntStream;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * ???
+ * Read property file and run loop
+ * reading sql database, using repository {@link JdbcRepository}
+ * and send TCP messages to server using sender {@link TcpSender}
  *
  * @author Ruslan Sheremet
- * @see
- * @since 1.0
+ * @see org.rublin.repository.Repository
+ * @see org.rublin.tcp.Sender
+ * @since 1.5
  */
 public class Main {
 
     private static final Logger LOG = getLogger(Main.class);
 
-    public static final ResourceBundle MYSQL = ResourceBundle.getBundle("db.mysql");
-    public static final String DATABASE_NAME = MYSQL.getString("database.dbName");
-    public static final String LOGIN = MYSQL.getString("database.username");
-    public static final String PASSWORD = MYSQL.getString("database.password");
-    public static final String TABLE = DATABASE_NAME + "." + MYSQL.getString("database.table");
-
-    public static final ResourceBundle TCP = ResourceBundle.getBundle("tcp.server");
-    public static final String SERVER_IP = TCP.getString("server.ip");
-    public static final int SERVER_PORT = Integer.valueOf(TCP.getString("server.port"));
-
-    private static Properties properties = new Properties();
-
-    private static final Repository repository = JdbcRepository.getRepository();
-    private static final Sender sender = TcpSender.getSender();
+    public static Properties properties = new Properties();
 
     public static void main(String[] args) {
         List<String> list;
-        int lastId = 300;
+        int lastId = 0;
         String filename = null;
+        /**
+         * Trying to read properties file using argument
+         */
         if (args.length > 0) {
-            try (FileInputStream input = new FileInputStream(args[0])) {
-                properties.load(input);
-                lastId = Integer.valueOf(properties.getProperty("lastId"));
+            if (readProperty(args[0])) {
+                lastId = Integer.valueOf(properties.getProperty("id.lastId"));
                 filename = args[0];
-                LOG.info("lastId property load success");
-            } catch (Exception e) {
-                LOG.error("Loading lastId property failed. Error is {}", e.getMessage());
             }
         } else {
-            LOG.info("lastId property not configured");
+            /**
+             * If argument not configured, trying to find default properties file
+             */
+            LOG.info("Properties file is not configured\n\t\t\tTrying to read default property");
+            if (readProperty("sql-to-tcp.properties")) {
+                lastId = Integer.valueOf(properties.getProperty("id.lastId"));
+                filename = "sql-to-tcp.properties";
+            } else {
+                LOG.info("I can't work without properties. \nPlease, read README at https://github.com/rublin/SQLtoTCP");
+            }
         }
         LOG.info("lastId set to {}", lastId);
-
+        String table = properties.getProperty("db.dbName") + "." + properties.getProperty("db.table");
         while (true && filename != null) {
-            list = repository.getLastRecords(lastId, TABLE);
+            list = JdbcRepository.getRepository().getLastRecords(lastId, table);
             if (list.size() > 0) {
-                list.forEach(s -> sender.sendMessage(s));
+                list.forEach(s -> TcpSender.getSender().sendMessage(s));
                 lastId = getLastId(list);
-                saveLastId(lastId, args[0]);
+                saveLastId(lastId, filename);
                 LOG.info("{} messages send successful. LastID: {}", list.size(), lastId);
             }
         }
-
-//        repository.closeRepository();
     }
 
+    /**
+     * Try to read property file and return result: true if success and false if not
+     *
+     * @param filename path to file
+     * @return true if success and false if not
+     */
+    private static boolean readProperty(String filename) {
+        try (FileInputStream input = new FileInputStream(filename)) {
+            properties.load(input);
+            LOG.info("Properties file {} load success", filename);
+            return true;
+        } catch (Exception e) {
+            LOG.error("Properties file loading failed. Error: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get last id from rows
+     *
+     * @param list List of rows (string {@link String}
+     * @return int last id
+     */
     private static int getLastId(List<String> list) {
         String s = list.get(list.size() - 1);
         return Integer.valueOf(
@@ -78,9 +93,15 @@ public class Main {
         );
     }
 
+    /**
+     * Store last id into properties file
+     *
+     * @param id last id
+     * @param filename properties file
+     */
     private static void saveLastId(int id, String filename) {
         try (FileOutputStream outputStream = new FileOutputStream(filename)) {
-            properties.setProperty("lastId", String.valueOf(id));
+            properties.setProperty("id.lastId", String.valueOf(id));
             properties.store(outputStream, "Properties");
             outputStream.close();
         } catch (Exception e) {
