@@ -25,7 +25,6 @@ public class Main {
 
     private static final Logger LOG = getLogger(Main.class);
 
-    private static final File ID_PROPERTIES = new File("src/main/resources/db/id.properties");
     public static final ResourceBundle MYSQL = ResourceBundle.getBundle("db.mysql");
     public static final String DATABASE_NAME = MYSQL.getString("database.dbName");
     public static final String LOGIN = MYSQL.getString("database.username");
@@ -36,27 +35,35 @@ public class Main {
     public static final String SERVER_IP = TCP.getString("server.ip");
     public static final int SERVER_PORT = Integer.valueOf(TCP.getString("server.port"));
 
-    /*private static Properties properties = new Properties();
-    static {
-        try (InputStream input = Main.class.getResourceAsStream("id.properties")) {
-            properties.load(input);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }*/
+    private static Properties properties = new Properties();
+
     private static final Repository repository = JdbcRepository.getRepository();
     private static final Sender sender = TcpSender.getSender();
 
     public static void main(String[] args) {
         List<String> list;
-//        int lastId = Integer.valueOf(properties.getProperty("lastId"));
-        int lastId = 1;
-        while (true) {
+        int lastId = 300;
+        String filename = null;
+        if (args.length > 0) {
+            try (FileInputStream input = new FileInputStream(args[0])) {
+                properties.load(input);
+                lastId = Integer.valueOf(properties.getProperty("lastId"));
+                filename = args[0];
+                LOG.info("lastId property load success");
+            } catch (Exception e) {
+                LOG.error("Loading lastId property failed. Error is {}", e.getMessage());
+            }
+        } else {
+            LOG.info("lastId property not configured");
+        }
+        LOG.info("lastId set to {}", lastId);
+
+        while (true && filename != null) {
             list = repository.getLastRecords(lastId, TABLE);
             if (list.size() > 0) {
                 list.forEach(s -> sender.sendMessage(s));
                 lastId = getLastId(list);
-//                saveLastId(lastId);
+                saveLastId(lastId, args[0]);
                 LOG.info("{} messages send successful. LastID: {}", list.size(), lastId);
             }
         }
@@ -71,14 +78,13 @@ public class Main {
         );
     }
 
-   /* private static void saveLastId(int id) {
-        try {
-            FileOutputStream outputStream = new FileOutputStream(ID_PROPERTIES);
+    private static void saveLastId(int id, String filename) {
+        try (FileOutputStream outputStream = new FileOutputStream(filename)) {
             properties.setProperty("lastId", String.valueOf(id));
             properties.store(outputStream, "Properties");
             outputStream.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Write to store lastId to property file. Error is {}", e.getMessage());
         }
-    }*/
+    }
 }
