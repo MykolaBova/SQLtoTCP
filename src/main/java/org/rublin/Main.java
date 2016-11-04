@@ -10,6 +10,7 @@ import java.io.*;
 import java.util.List;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import java.util.stream.IntStream;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -35,26 +36,27 @@ public class Main {
     public static final String SERVER_IP = TCP.getString("server.ip");
     public static final int SERVER_PORT = Integer.valueOf(TCP.getString("server.port"));
 
-    private static Properties properties = new Properties();
+    /*private static Properties properties = new Properties();
     static {
-        try (FileInputStream input = new FileInputStream(ID_PROPERTIES)) {
+        try (InputStream input = Main.class.getResourceAsStream("id.properties")) {
             properties.load(input);
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
     private static final Repository repository = JdbcRepository.getRepository();
     private static final Sender sender = TcpSender.getSender();
 
     public static void main(String[] args) {
         List<String> list;
-        int lastId = Integer.valueOf(properties.getProperty("lastId"));
+//        int lastId = Integer.valueOf(properties.getProperty("lastId"));
+        int lastId = 1;
         while (true) {
             list = repository.getLastRecords(lastId, TABLE);
             if (list.size() > 0) {
                 list.forEach(s -> sender.sendMessage(s));
                 lastId = getLastId(list);
-                saveLastId(lastId);
+//                saveLastId(lastId);
                 LOG.info("{} messages send successful. LastID: {}", list.size(), lastId);
             }
         }
@@ -69,7 +71,7 @@ public class Main {
         );
     }
 
-    private static void saveLastId(int id) {
+   /* private static void saveLastId(int id) {
         try {
             FileOutputStream outputStream = new FileOutputStream(ID_PROPERTIES);
             properties.setProperty("lastId", String.valueOf(id));
@@ -78,5 +80,5 @@ public class Main {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
 }
